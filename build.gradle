@@ -106,6 +106,5 @@ task copyMod(type: Copy) {
     into "C:\\Users\\user\\AppData\\Roaming\\PrismLauncher\\instances\\1.21.8\\minecraft\\mods"
 }
 
-
-
 build.finalizedBy copyMod
+
