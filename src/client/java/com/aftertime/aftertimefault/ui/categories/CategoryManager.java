@@ -9,6 +9,7 @@ public class CategoryManager {
     static {
         // Register categories
         CATEGORIES.put("Render", new RenderCategory());
+        CATEGORIES.put("SkyBlock", new SkyBlockCategory());
         // Add other categories here
     }
 

@@ -102,9 +102,9 @@ publishing {
 // Automatically copy the remapped jar to PrismLauncher mods folder after build
 
 task copyMod(type: Copy) {
-    from("$buildDir/libs/ratallofyou-2.2.jar")
+    dependsOn remapJar
+    from("$buildDir/libs/${project.base.archivesName}-${version}.jar")
     into "C:\\Users\\user\\AppData\\Roaming\\PrismLauncher\\instances\\1.21.8\\minecraft\\mods"
 }
-
 build.finalizedBy copyMod
 

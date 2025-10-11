@@ -5,6 +5,8 @@ public class ModConfig {
     public boolean enableDarkMode = false;
     public int darkModeOpacity = 128;
 
+    // SkyBlock category
+
     // Add other config fields as needed
 
     public void save() {
