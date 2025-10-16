@@ -1,19 +1,22 @@
 package com.aftertime.aftertimefault.config;
 
+
+import com.aftertime.aftertimefault.UI.annotations.*;
+
 public class ModConfig {
-    // Render category
-    public boolean enableDarkMode = false;
-    public int darkModeOpacity = 128;
+    @ToggleButton(
+            key = "dark-mode",
+            name = "Dark Mode",
+            description = "Protect your lovely eye balls",
+            category = "Render"
+    )
+    public static boolean enableDarkMode = false;
 
-    // SkyBlock category
-
-    // Add other config fields as needed
-
-    public void save() {
-        ConfigManager.saveConfig(this);
-    }
-
-    public static ModConfig load() {
-        return ConfigManager.loadConfig();
-    }
+    @Slider(
+            key = "dark-mode",
+            title = "Opacity",
+            min = 0,
+            max = 255
+    )
+    public static int darkModeOpacity = 128;
 }
