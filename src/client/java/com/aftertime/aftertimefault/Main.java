@@ -2,6 +2,7 @@ package com.aftertime.aftertimefault;
 
 import com.aftertime.aftertimefault.KeyBind.KeybindHandler;
 import com.aftertime.aftertimefault.UI.config.ModConfigIO;
+import com.aftertime.aftertimefault.modules.dungeon.InvincibleTimer;
 import com.aftertime.aftertimefault.modules.render.DarkMode;
 import net.fabricmc.api.ClientModInitializer;
 
@@ -15,6 +16,7 @@ public class Main implements ClientModInitializer {
         ModConfigIO.load();
         // Register DarkMode to use the loaded ModConfig
         DarkMode.register();
+        InvincibleTimer.register();
         // Register keybinds
         KeybindHandler.registerKeybinds();
     }
