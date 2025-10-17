@@ -140,4 +140,101 @@ public class ModConfig {
             maxLength = 256
     )
     public static String autoSellCustomItems = "";
+
+    @ToggleButton(
+            key = "auto-fish",
+            name = "Auto Fish",
+            description = "Automatically fish for you",
+            category = "Fishing"
+    )
+    public static boolean enabledAutoFish = false;
+
+    @CheckBox(
+            key = "auto-fish",
+            title = "Sneak Hold"
+    )
+    public static boolean autofishSneakHold = false;
+
+    @CheckBox(
+            key = "auto-fish",
+            title = "Throw If No Hook"
+    )
+    public static boolean autofishThrowIfNoHook = true;
+
+    @Slider(
+            key = "auto-fish",
+            title = "Throw Cooldown (s)",
+            min = 0,
+            max = 10
+    )
+    public static int autofishThrowCooldownS = 1;
+
+    @CheckBox(
+            key = "auto-fish",
+            title = "Rethrow"
+    )
+    public static boolean autofishRethrow = true;
+
+    @Slider(
+            key = "auto-fish",
+            title = "Rethrow Timeout (s)",
+            min = 1,
+            max = 60
+    )
+    public static int autofishRethrowTimeoutS = 30;
+
+    @CheckBox(
+            key = "auto-fish",
+            title = "Slug Mode"
+    )
+    public static boolean autofishSlugMode = false;
+
+    @CheckBox(
+            key = "auto-fish",
+            title = "Show Messages"
+    )
+    public static boolean autofishMessages = true;
+
+    @CheckBox(
+            key = "auto-fish",
+            title = "Show Timer"
+    )
+    public static boolean autofishShowTimer = true;
+
+    @Slider(
+            key = "auto-fish",
+            title = "Timer X",
+            min = 0,
+            max = 1000
+    )
+    public static int autofishTimerX = 10;
+
+    @Slider(
+            key = "auto-fish",
+            title = "Timer Y",
+            min = 0,
+            max = 1000
+    )
+    public static int autofishTimerY = 10;
+
+    @CheckBox(
+            key = "auto-fish",
+            title = "Auto Shift"
+    )
+    public static boolean enabledAutoShift = false;
+
+    @Slider(
+            key = "auto-fish",
+            title = "Auto Shift Interval (s)",
+            min = 1,
+            max = 60
+    )
+    public static int autofishAutoShiftIntervalS = 30;
+
+    @TextInputField(
+            key = "auto-fish",
+            title = "Toggle Hotkey",
+            maxLength = 16
+    )
+    public static String autofishHotkeyName = "F";
 }

@@ -1,0 +1,217 @@
+package dev.greencat.shimmer.module.modules.macro;
+
+import dev.greencat.shimmer.Shimmer;
+import dev.greencat.shimmer.event.events.RenderEvent;
+import dev.greencat.shimmer.event.events.TickEvent;
+import dev.greencat.shimmer.eventbus.ShimmerSubscribe;
+import dev.greencat.shimmer.module.Module;
+import dev.greencat.shimmer.module.modules.render.Hud;
+import dev.greencat.shimmer.setting.Setting;
+import dev.greencat.shimmer.setting.settings.BooleanSetting;
+import dev.greencat.shimmer.setting.settings.ModeSetting;
+import dev.greencat.shimmer.setting.settings.NumberSetting;
+import dev.greencat.shimmer.util.player.PlayerUtil;
+import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
+import net.minecraft.class_124;
+import net.minecraft.class_1297;
+import net.minecraft.class_1536;
+import net.minecraft.class_1802;
+import net.minecraft.class_2561;
+import net.minecraft.class_310;
+
+public class AutoFish extends Module {
+  private static boolean fishHooked;
+
+  private static int tickAfterHook;
+
+  private static long lastThrow;
+
+  private static boolean lastRotate = false;
+
+  private static boolean lastMove = false;
+
+  private static long lastFishUP = 0L;
+
+  private static float originYaw = 0.0F;
+
+  private static float originPitch = 0.0F;
+
+  private static boolean isThrowed = false;
+
+  private static boolean prevThrowed = false;
+
+  private static final Timer timer = new Timer();
+
+  private static Random random = new Random();
+
+  public final BooleanSetting enableMove = new BooleanSetting("Move", "Allow move when finish fishing", true);
+
+  public final BooleanSetting enableSneak = new BooleanSetting("SneakMove", "Allow sneak when move", true);
+
+  public final BooleanSetting alwaysSneak = new BooleanSetting("Always Sneak", "Allow sneak when fishing", true);
+
+  public final BooleanSetting enableAutoRethrow = new BooleanSetting("AutoReset", "Auto reset status after 20s if no fish hooked", true);
+
+  public final ModeSetting moveMethod = new ModeSetting("Move Method", "How to move when finish fishing", "WS", new String[] { "WS", "AD" });
+
+  public final NumberSetting throwDelay = new NumberSetting("Throw Delay (tick)", "How many ticks will wait when finish fishing", 10.0D, 10.0D, 30.0D, 1.0D);
+
+  public final BooleanSetting enableRotate = new BooleanSetting("Rotate", "Allow rotate when finish fishing", true);
+
+  public AutoFish() {
+    super("AutoFish", "Fishing Automatically", -1, Module.Category.MACRO);
+    addSettings(new Setting[] { (Setting)this.enableMove, (Setting)this.enableSneak, (Setting)this.moveMethod, (Setting)this.throwDelay, (Setting)this.enableRotate, (Setting)this.enableAutoRethrow, (Setting)this.alwaysSneak });
+    this.needDisable = true;
+  }
+
+  @ShimmerSubscribe
+  public void onRender(RenderEvent.Post event) {
+    if (mc.field_1687 == null || mc.field_1724 == null)
+      return;
+    for (class_1297 entity : mc.field_1687.method_18112()) {
+      if (entity.method_16914() && entity.method_5797().getString().contains("!!!") && System.currentTimeMillis() - lastFishUP >= 500L) {
+        fishHooked = true;
+        tickAfterHook = 0;
+        lastFishUP = System.currentTimeMillis();
+        break;
+      }
+    }
+  }
+
+  public void onEnable() {
+    if ((class_310.method_1551()).field_1724 != null) {
+      super.onEnable();
+      fishHooked = false;
+      random = new Random();
+      originYaw = (class_310.method_1551()).field_1724.method_36454();
+      originPitch = (class_310.method_1551()).field_1724.method_36455();
+      if (this.alwaysSneak.isEnabled())
+        Shimmer.getInstance().getModuleManager().getModule("Sneak").setEnabled(true);
+    }
+  }
+
+  public void onDisable() {
+    super.onDisable();
+    if (this.alwaysSneak.isEnabled())
+      Shimmer.getInstance().getModuleManager().getModule("Sneak").setEnabled(false);
+  }
+
+  @ShimmerSubscribe
+  public void onTick(TickEvent event) {
+    float randomYaw = random.nextFloat() * 4.5F - 2.25F;
+    float randomPitch = random.nextFloat() * 4.5F - 2.25F;
+    if ((class_310.method_1551()).field_1724 == null)
+      return;
+    isThrowed = false;
+    for (class_1297 entity : (class_310.method_1551()).field_1687.method_18112()) {
+      if (entity instanceof class_1536) {
+        class_1536 hook = (class_1536)entity;
+        if (hook.method_6947() != null && hook.method_6947().method_5845().equals((class_310.method_1551()).field_1724.method_5845())) {
+          isThrowed = true;
+          break;
+        }
+      }
+    }
+    if (this.enableAutoRethrow.isEnabled() && System.currentTimeMillis() - lastThrow >= (isThrowed ? 20000L : 3000L) && !(class_310.method_1551()).field_1724.method_6047().method_7960() && (class_310.method_1551()).field_1724.method_6047().method_7909() == class_1802.field_8378) {
+      (class_310.method_1551()).field_1724.method_36456(originYaw);
+      (class_310.method_1551()).field_1724.method_36457(originPitch);
+      PlayerUtil.useItem();
+      lastThrow = System.currentTimeMillis();
+      Hud.onMessage(new class_2561[] { (class_2561)class_2561.method_43470(String.valueOf(class_124.field_1067) + "AutoFish"), (class_2561)class_2561.method_43470("After " + (isThrowed ? 20 : 3) + "s"), (class_2561)class_2561.method_43470("Auto reset triggered") });
+      if (isThrowed)
+        timer.schedule(new TimerTask(this) {
+              public void run() {
+                PlayerUtil.useItem();
+                AutoFish.lastThrow = System.currentTimeMillis();
+              }
+            },  1000L);
+    }
+    if (isThrowed && !prevThrowed) {
+      lastThrow = System.currentTimeMillis();
+      Hud.onMessage(new class_2561[] { (class_2561)class_2561.method_43470(String.valueOf(class_124.field_1067) + "AutoFish"), (class_2561)class_2561.method_43470("Throw hook detected"), (class_2561)class_2561.method_43470("Already reset the hook timer") });
+    }
+    if (fishHooked) {
+      if (tickAfterHook == 0) {
+        PlayerUtil.useItem();
+        lastThrow = System.currentTimeMillis();
+        if (this.enableRotate.isEnabled()) {
+          (class_310.method_1551()).field_1724.method_36456((class_310.method_1551()).field_1724.method_36454() + randomYaw);
+          (class_310.method_1551()).field_1724.method_36457((class_310.method_1551()).field_1724.method_36455() + randomPitch);
+        }
+      }
+      if (tickAfterHook == 3 &&
+        this.enableRotate.isEnabled()) {
+        (class_310.method_1551()).field_1724.method_36456((class_310.method_1551()).field_1724.method_36454() - randomYaw);
+        (class_310.method_1551()).field_1724.method_36457((class_310.method_1551()).field_1724.method_36455() - randomPitch);
+      }
+      if (tickAfterHook == (int)this.throwDelay.getValue()) {
+        if (Math.abs((class_310.method_1551()).field_1724.method_36454() - originYaw) > 2.5F || Math.abs((class_310.method_1551()).field_1724.method_36455() - originPitch) > 2.5F) {
+          (class_310.method_1551()).field_1724.method_36456(originYaw);
+          (class_310.method_1551()).field_1724.method_36457(originPitch);
+        }
+        PlayerUtil.useItem();
+        (class_310.method_1551()).field_1724.method_36456((class_310.method_1551()).field_1724.method_36454() + (lastRotate ? 3 : -3));
+        lastRotate = !lastRotate;
+        lastThrow = System.currentTimeMillis();
+      }
+      if (tickAfterHook == 2 && this.enableSneak.isEnabled())
+        (class_310.method_1551()).field_1690.field_1832.method_23481(true);
+      if (tickAfterHook == 3 && this.enableMove.isEnabled()) {
+        if (this.moveMethod.getMode().equals("WS"))
+          if (lastMove) {
+            (class_310.method_1551()).field_1690.field_1913.method_23481(true);
+          } else {
+            (class_310.method_1551()).field_1690.field_1849.method_23481(true);
+          }
+        if (this.moveMethod.getMode().equals("AD"))
+          if (lastMove) {
+            (class_310.method_1551()).field_1690.field_1894.method_23481(true);
+          } else {
+            (class_310.method_1551()).field_1690.field_1881.method_23481(true);
+          }
+      }
+      if (tickAfterHook == 4 && this.enableMove.isEnabled()) {
+        if (this.moveMethod.getMode().equals("WS"))
+          if (lastMove) {
+            (class_310.method_1551()).field_1690.field_1913.method_23481(false);
+            (class_310.method_1551()).field_1690.field_1849.method_23481(true);
+          } else {
+            (class_310.method_1551()).field_1690.field_1849.method_23481(false);
+            (class_310.method_1551()).field_1690.field_1913.method_23481(true);
+          }
+        if (this.moveMethod.getMode().equals("AD"))
+          if (lastMove) {
+            (class_310.method_1551()).field_1690.field_1894.method_23481(false);
+            (class_310.method_1551()).field_1690.field_1881.method_23481(true);
+          } else {
+            (class_310.method_1551()).field_1690.field_1881.method_23481(false);
+            (class_310.method_1551()).field_1690.field_1894.method_23481(true);
+          }
+      }
+      if (tickAfterHook == 4 && this.enableMove.isEnabled()) {
+        if (this.moveMethod.getMode().equals("WS"))
+          if (lastMove) {
+            (class_310.method_1551()).field_1690.field_1849.method_23481(false);
+          } else {
+            (class_310.method_1551()).field_1690.field_1913.method_23481(false);
+          }
+        if (this.moveMethod.getMode().equals("AD"))
+          if (lastMove) {
+            (class_310.method_1551()).field_1690.field_1881.method_23481(false);
+          } else {
+            (class_310.method_1551()).field_1690.field_1894.method_23481(false);
+          }
+        lastMove = !lastMove;
+      }
+      if (tickAfterHook == 5 && this.enableSneak.isEnabled())
+        (class_310.method_1551()).field_1690.field_1832.method_23481(false);
+      if (tickAfterHook > 31)
+        fishHooked = false;
+      tickAfterHook++;
+    }
+    if (isThrowed != prevThrowed)
+      prevThrowed = isThrowed;
+  }
+}

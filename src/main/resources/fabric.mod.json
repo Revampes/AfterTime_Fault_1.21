@@ -14,6 +14,9 @@
 			"com.aftertime.aftertimefault.Main"
 		]
 	},
+	"mixins": [
+		"modid.client.mixins.json"
+	],
 	"depends": {
 		"fabricloader": ">=0.17.2",
 		"minecraft": "~1.21.8",
