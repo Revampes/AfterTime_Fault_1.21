@@ -2,6 +2,7 @@ package com.aftertime.aftertimefault;
 
 import com.aftertime.aftertimefault.KeyBind.KeybindHandler;
 import com.aftertime.aftertimefault.UI.config.ModConfigIO;
+import com.aftertime.aftertimefault.modules.dungeon.AutoSell;
 import com.aftertime.aftertimefault.modules.dungeon.InvincibleTimer;
 import com.aftertime.aftertimefault.modules.dungeon.KeyHighlight;
 import com.aftertime.aftertimefault.modules.dungeon.StarMobHighlight;
@@ -21,6 +22,7 @@ public class Main implements ClientModInitializer {
         InvincibleTimer.register();
         StarMobHighlight.register();
         KeyHighlight.register();
+        AutoSell.register();
         // Register keybinds
         KeybindHandler.registerKeybinds();
     }

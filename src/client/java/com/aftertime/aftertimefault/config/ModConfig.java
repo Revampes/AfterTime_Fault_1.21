@@ -103,4 +103,41 @@ public class ModConfig {
             title = "Blood Key Color"
     )
     public static int bloodKeyColor = 0xFF0000; // Red
+
+    @ToggleButton(
+            key = "auto-sell",
+            name = "Auto Sell",
+            description = "Automatically sell items in dungeon chests",
+            category = "Dungeon"
+    )
+    public static boolean enableAutoSell = false;
+
+    @Slider(
+            key = "auto-sell",
+            title = "Delay (ms)",
+            min = 100,
+            max = 2000
+    )
+    public static int autoSellDelayMs = 500;
+
+    @Slider(
+            key = "auto-sell",
+            title = "Click Type",
+            min = 0,
+            max = 2
+    )
+    public static int autoSellClickType = 0; // 0=Shift, 1=Middle, 2=Left
+
+    @CheckBox(
+            key = "auto-sell",
+            title = "Use Default Items"
+    )
+    public static boolean autoSellUseDefaultItems = true;
+
+    @TextInputField(
+            key = "auto-sell",
+            title = "Custom Items (comma separated)",
+            maxLength = 256
+    )
+    public static String autoSellCustomItems = "";
 }
