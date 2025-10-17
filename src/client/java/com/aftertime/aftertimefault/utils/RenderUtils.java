@@ -14,6 +14,7 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.World;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.lwjgl.opengl.GL11;
 
 /**
  * Render utilities ported to Fabric 1.21.8 (Yarn mappings).
@@ -47,9 +48,20 @@ public final class RenderUtils {
         RenderSystem.lineWidth(lineWidth);
 
         VertexConsumerProvider.Immediate immediate = MC.getBufferBuilders().getEntityVertexConsumers();
-        // Fallback to standard line layer; depth toggle not available in this mapping
-        RenderLayer layer = RenderLayer.getLines();
-        VertexConsumer lines = immediate.getBuffer(layer);
+
+        // Draw without depth test for see-through effect
+        if (!depthTest) {
+            GL11.glDepthMask(false);
+            GL11.glDepthFunc(GL11.GL_ALWAYS);
+            VertexConsumer lines = immediate.getBuffer(RenderLayer.getLines());
+            emitBoxLines(matrices.peek().getPositionMatrix(), lines, box, red, green, blue, alpha * 0.5f);
+            immediate.draw();
+            GL11.glDepthFunc(GL11.GL_LEQUAL);
+            GL11.glDepthMask(true);
+        }
+
+        // Always draw with depth test for normal visibility
+        VertexConsumer lines = immediate.getBuffer(RenderLayer.getLines());
         emitBoxLines(matrices.peek().getPositionMatrix(), lines, box, red, green, blue, alpha);
         immediate.draw();
     }
@@ -189,11 +201,21 @@ public final class RenderUtils {
     }
 
     private static void line(VertexConsumer vc, Matrix4f mat, float x1, float y1, float z1, float x2, float y2, float z2, float r, float g, float b, float a) {
-        // Set color then emit vertex; this mapping doesn't require explicit next/end
-        vc.color(r, g, b, a);
-        vc.vertex(mat, x1, y1, z1);
-        vc.color(r, g, b, a);
-        vc.vertex(mat, x2, y2, z2);
+        // Calculate direction vector for normal
+        float dx = x2 - x1;
+        float dy = y2 - y1;
+        float dz = z2 - z1;
+        float length = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        // Normalize for normal vector (or use default if zero length)
+        float nx = length > 0 ? dx / length : 0;
+        float ny = length > 0 ? dy / length : 1;
+        float nz = length > 0 ? dz / length : 0;
+
+        // Emit first vertex with all required components (no .next() in 1.21.8)
+        vc.vertex(mat, x1, y1, z1).color(r, g, b, a).normal(nx, ny, nz);
+        // Emit second vertex with all required components
+        vc.vertex(mat, x2, y2, z2).color(r, g, b, a).normal(nx, ny, nz);
     }
 
     // Simple Color holder (RGBA 0..255)

@@ -63,4 +63,44 @@ public class ModConfig {
 
     @Slider(key = "invincible-timer", title = "Scale", min = 0.5f, max = 3.0f)
     public static float invincibleScale = 1.0f;
+
+    @ToggleButton(
+            key = "star-mob-highlighter",
+            name = "Star Mob Highlighter",
+            description = "Highlights starred mobs and Shadow Assassins in dungeons",
+            category = "Dungeon"
+    )
+    public static boolean enableStarMobHighlighter = false;
+
+    @ColorPicker(
+            key = "star-mob-highlighter",
+            title = "Star Mob Color"
+    )
+    public static int starMobColor = 0xFFFF00; // Yellow
+
+    @ColorPicker(
+            key = "star-mob-highlighter",
+            title = "Shadow Assassin Color"
+    )
+    public static int shadowAssassinColor = 0xAA00FF; // Purple
+
+    @ToggleButton(
+            key = "key-highlighter",
+            name = "Key Highlighter",
+            description = "Highlights Wither Keys and Blood Keys in dungeons",
+            category = "Dungeon"
+    )
+    public static boolean enableKeyHighlighter = false;
+
+    @ColorPicker(
+            key = "key-highlighter",
+            title = "Wither Key Color"
+    )
+    public static int witherKeyColor = 0xFFFF00; // Yellow
+
+    @ColorPicker(
+            key = "key-highlighter",
+            title = "Blood Key Color"
+    )
+    public static int bloodKeyColor = 0xFF0000; // Red
 }

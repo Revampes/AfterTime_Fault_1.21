@@ -95,14 +95,31 @@ public class ColorPicker extends UIElement {
         int alphaY = svY + svH + padding;
         int alphaW = svW;
 
-        // Draw SV square
-        for (int yy = 0; yy < svH; yy++) {
-            float v = 1.0f - (yy / (float)(svH - 1));
-            for (int xx = 0; xx < svW; xx++) {
-                float s = xx / (float)(svW - 1);
-                int rgb = Color.HSBtoRGB(hue, s, v);
-                int argb = ((int)(alpha * 255) << 24) | (rgb & 0x00FFFFFF);
-                RenderUtil.fill(context, svX + xx, svY + yy, svX + xx + 1, svY + yy + 1, argb);
+        // Draw SV square - highly optimized with reduced sample points
+        int vSteps = 18; // Reduced from 90 to 18 (5x reduction)
+        int sSteps = 24; // Reduced from 120 to 24 (5x reduction)
+
+        for (int vy = 0; vy < vSteps; vy++) {
+            float v1 = 1.0f - (vy / (float) vSteps);
+            float v2 = 1.0f - ((vy + 1) / (float) vSteps);
+            int y1 = svY + (vy * svH / vSteps);
+            int y2 = svY + ((vy + 1) * svH / vSteps);
+
+            for (int sx = 0; sx < sSteps; sx++) {
+                float s1 = sx / (float) sSteps;
+                float s2 = (sx + 1) / (float) sSteps;
+                int x1 = svX + (sx * svW / sSteps);
+                int x2 = svX + ((sx + 1) * svW / sSteps);
+
+                // Average the 4 corners for this cell
+                float vAvg = (v1 + v2) / 2.0f;
+                float sAvg = (s1 + s2) / 2.0f;
+
+                int rgb = Color.HSBtoRGB(hue, sAvg, vAvg);
+                int a = ((int) (alpha * 255) << 24);
+                int color = a | (rgb & 0x00FFFFFF);
+
+                RenderUtil.fill(context, x1, y1, x2, y2, color);
             }
         }
 
@@ -111,11 +128,14 @@ public class ColorPicker extends UIElement {
         int cy = svY + Math.round((1 - val) * (svH - 1));
         drawCrosshair(context, cx, cy);
 
-        // Draw hue bar
-        for (int yy = 0; yy < svH; yy++) {
-            float h = yy / (float)(svH - 1);
+        // Draw hue bar - optimized with fewer steps
+        int hueSteps = 18; // Reduced from 90 to 18
+        for (int i = 0; i < hueSteps; i++) {
+            float h = i / (float) hueSteps;
+            int y1 = hueY + (i * svH / hueSteps);
+            int y2 = hueY + ((i + 1) * svH / hueSteps);
             int rgb = Color.HSBtoRGB(h, 1f, 1f);
-            RenderUtil.fill(context, hueX, hueY + yy, hueX + hueW, hueY + yy + 1, 0xFF000000 | (rgb & 0x00FFFFFF));
+            RenderUtil.fill(context, hueX, y1, hueX + hueW, y2, 0xFF000000 | (rgb & 0x00FFFFFF));
         }
 
         // Hue selector
@@ -125,11 +145,17 @@ public class ColorPicker extends UIElement {
 
         // Alpha bar with checkerboard
         drawCheckerboard(context, alphaX, alphaY, alphaW, alphaH, 4, 0xFFBBBBBB, 0xFF888888);
-        for (int xx = 0; xx < alphaW; xx++) {
-            float a = xx / (float)(alphaW - 1);
-            int rgb = Color.HSBtoRGB(hue, sat, val);
-            int argb = ((int)(a * 255) << 24) | (rgb & 0x00FFFFFF);
-            RenderUtil.fill(context, alphaX + xx, alphaY, alphaX + xx + 1, alphaY + alphaH, argb);
+
+        // Draw alpha gradient - optimized with chunks
+        int alphaSteps = 24; // Reduced from 120 to 24
+        int rgb = Color.HSBtoRGB(hue, sat, val);
+        for (int i = 0; i < alphaSteps; i++) {
+            float a = i / (float) alphaSteps;
+            int x1 = alphaX + (i * alphaW / alphaSteps);
+            int x2 = alphaX + ((i + 1) * alphaW / alphaSteps);
+            int alphaVal = (int) (a * 255);
+            int color = (alphaVal << 24) | (rgb & 0x00FFFFFF);
+            RenderUtil.fill(context, x1, alphaY, x2, alphaY + alphaH, color);
         }
 
         // Alpha selector
@@ -144,25 +170,30 @@ public class ColorPicker extends UIElement {
         } else {
             if (draggingSV || (mouseX >= svX && mouseX <= svX + svW && mouseY >= svY && mouseY <= svY + svH)) {
                 draggingSV = true;
-                float ns = (mouseX - svX) / (float)(svW - 1);
-                float nv = 1.0f - (mouseY - svY) / (float)(svH - 1);
-                ns = clamp01(ns); nv = clamp01(nv);
+                float ns = (mouseX - svX) / (float) (svW - 1);
+                float nv = 1.0f - (mouseY - svY) / (float) (svH - 1);
+                ns = clamp01(ns);
+                nv = clamp01(nv);
                 if (ns != sat || nv != val) {
-                    sat = ns; val = nv; updateColorFromHSV();
+                    sat = ns;
+                    val = nv;
+                    updateColorFromHSV();
                 }
             } else if (draggingHue || (mouseX >= hueX && mouseX <= hueX + hueW && mouseY >= hueY && mouseY <= hueY + svH)) {
                 draggingHue = true;
-                float nh = (mouseY - hueY) / (float)(svH - 1);
+                float nh = (mouseY - hueY) / (float) (svH - 1);
                 nh = clamp01(nh);
                 if (nh != hue) {
-                    hue = nh; updateColorFromHSV();
+                    hue = nh;
+                    updateColorFromHSV();
                 }
             } else if (draggingAlpha || (mouseX >= alphaX && mouseX <= alphaX + alphaW && mouseY >= alphaY && mouseY <= alphaY + alphaH)) {
                 draggingAlpha = true;
-                float na = (mouseX - alphaX) / (float)(alphaW - 1);
+                float na = (mouseX - alphaX) / (float) (alphaW - 1);
                 na = clamp01(na);
                 if (na != alpha) {
-                    alpha = na; updateColorFromHSV();
+                    alpha = na;
+                    updateColorFromHSV();
                 }
             }
         }
@@ -206,21 +237,25 @@ public class ColorPicker extends UIElement {
         if (button == 0) {
             if (mouseX >= svX && mouseX <= svX + svW && mouseY >= svY && mouseY <= svY + svH) {
                 draggingSV = true;
-                float ns = (mouseX - svX) / (float)(svW - 1);
-                float nv = 1.0f - (mouseY - svY) / (float)(svH - 1);
-                sat = clamp01(ns); val = clamp01(nv); updateColorFromHSV();
+                float ns = (mouseX - svX) / (float) (svW - 1);
+                float nv = 1.0f - (mouseY - svY) / (float) (svH - 1);
+                sat = clamp01(ns);
+                val = clamp01(nv);
+                updateColorFromHSV();
                 return true;
             }
             if (mouseX >= hueX && mouseX <= hueX + hueW && mouseY >= hueY && mouseY <= hueY + svH) {
                 draggingHue = true;
-                float nh = (mouseY - hueY) / (float)(svH - 1);
-                hue = clamp01(nh); updateColorFromHSV();
+                float nh = (mouseY - hueY) / (float) (svH - 1);
+                hue = clamp01(nh);
+                updateColorFromHSV();
                 return true;
             }
             if (mouseX >= alphaX && mouseX <= alphaX + alphaW && mouseY >= alphaY && mouseY <= alphaY + alphaH) {
                 draggingAlpha = true;
-                float na = (mouseX - alphaX) / (float)(alphaW - 1);
-                alpha = clamp01(na); updateColorFromHSV();
+                float na = (mouseX - alphaX) / (float) (alphaW - 1);
+                alpha = clamp01(na);
+                updateColorFromHSV();
                 return true;
             }
             picking = false;
@@ -242,7 +277,9 @@ public class ColorPicker extends UIElement {
         }
     }
 
-    public Color getColor() { return color; }
+    public Color getColor() {
+        return color;
+    }
 
     public void setColor(Color color) {
         this.color = color;
@@ -272,17 +309,24 @@ public class ColorPicker extends UIElement {
     }
 
     @Override
-    public boolean hasOverlayOpen() { return picking; }
+    public boolean hasOverlayOpen() {
+        return picking;
+    }
 
     @Override
-    public void closeOverlay() { picking = false; draggingSV = draggingHue = draggingAlpha = false; }
+    public void closeOverlay() {
+        picking = false;
+        draggingSV = draggingHue = draggingAlpha = false;
+    }
 
     @Override
     public int getTopPadding() {
         return 12;
     }
 
-    private static float clamp01(float f) { return f < 0 ? 0 : (f > 1 ? 1 : f); }
+    private static float clamp01(float f) {
+        return f < 0 ? 0 : (f > 1 ? 1 : f);
+    }
 
     private void drawCheckerboard(DrawContext context, int px, int py, int w, int h, int cell, int c1, int c2) {
         for (int yy = 0; yy < h; yy += cell) {
