@@ -7,7 +7,6 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.entity.projectile.FishingBobberEntity;
@@ -36,6 +35,11 @@ public class AutoFish {
     private boolean fishHooked = false;
     private int tickAfterHook = 0;
     private long lastFishDetectionTime = 0L;
+    private long lastDebugTime = 0L;
+
+    // Debug counter
+    private int soundCallbackCount = 0;
+    private long lastSoundCallbackTime = 0L;
 
     // Sneak handling
     private boolean holdSneakActive = false; // tracking if we are holding sneak due to cfgSneak
@@ -79,17 +83,13 @@ public class AutoFish {
         // Register render event for timer
         HudRenderCallback.EVENT.register((drawContext, tickCounter) -> onRender(drawContext));
 
-        // Register render event for fish detection (runs every frame for faster detection)
-        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> {
-            // Only do fish bite detection here; UI rendering is already handled above
-            checkForFishBiteRender(); // Check during render for fastest detection
-        });
-
         // Register item use callback for manual interaction detection
         UseItemCallback.EVENT.register((player, world, hand) -> {
             onInteract();
             return ActionResult.PASS;
         });
+
+        debug("AutoFish registered successfully!");
     }
 
     // Cached config helpers
@@ -109,31 +109,9 @@ public class AutoFish {
     private int cfgTimerY() { return ModConfig.autofishTimerY; }
     private boolean cfgAutoShift() { return ModConfig.enabledAutoShift; }
     private int cfgAutoShiftIntervalS() { return Math.max(1, ModConfig.autofishAutoShiftIntervalS); }
-    private int cfgHotkey() {
-        try {
-            String name = ModConfig.autofishHotkeyName;
-            if (name == null) return 0;
-            name = name.trim();
-            if (name.isEmpty() || name.equalsIgnoreCase("none")) return 0;
-            // Convert key name to GLFW key code (simplified - you might need a mapping)
-            return getKeyCodeFromName(name);
-        } catch (Throwable ignored) { return 0; }
-    }
-
-    private int getKeyCodeFromName(String name) {
-        // Simplified key mapping - you might want to expand this
-        return switch (name.toUpperCase()) {
-            case "F" -> GLFW.GLFW_KEY_F;
-            case "R" -> GLFW.GLFW_KEY_R;
-            case "G" -> GLFW.GLFW_KEY_G;
-            case "H" -> GLFW.GLFW_KEY_H;
-            case "V" -> GLFW.GLFW_KEY_V;
-            case "B" -> GLFW.GLFW_KEY_B;
-            default -> GLFW.GLFW_KEY_UNKNOWN;
-        };
-    }
 
     private void resetState() {
+        debug("Resetting state");
         autoFishActive = false;
         hookTick = -1;
         hookThrownCooldown = 0;
@@ -160,12 +138,21 @@ public class AutoFish {
             boolean newState = !ModConfig.enabledAutoFish;
             ModConfig.enabledAutoFish = newState;
             say("Toggle: " + (newState ? "Enabled" : "Disabled"));
+            debug("AutoFish toggled: " + newState);
             if (!newState) {
                 resetState();
             }
         }
 
         boolean enabled = isModuleEnabled();
+
+        // Periodic debug output
+        long now = System.currentTimeMillis();
+        if (enabled && now - lastDebugTime > 5000) {
+            debug("Status: enabled=" + enabled + ", hookThrown=" + isHookThrown() + ", fishHooked=" + fishHooked +
+                  ", hookTick=" + hookTick + ", holdingRod=" + isHoldingRod());
+            lastDebugTime = now;
+        }
 
         // Maintain hookTick progression
         if (hookTick >= 0) hookTick++;
@@ -228,7 +215,7 @@ public class AutoFish {
         if (cfgThrowIfNoHook()) {
             if (!isHookThrown()) {
                 if (hookThrownCooldown >= cfgThrowCooldownTicks()) {
-                    // Maximize player sounds to hear splash reliably while active
+                    debug("Auto-throwing hook (no hook detected)");
                     boostSoundTemporarily();
                     useRod();
                     autoFishActive = true;
@@ -244,33 +231,47 @@ public class AutoFish {
             }
         }
 
+        // Check for fish bite by monitoring bobber (since sound detection isn't working)
+        if (!fishHooked && isHookThrown() && hookTick > 20) {
+            System.out.println("[AutoFish TICK] Calling checkBobberForBite - hookTick=" + hookTick);
+            checkBobberForBite();
+        } else {
+            if (hookTick > 0 && hookTick % 20 == 0) {
+                System.out.println("[AutoFish TICK] NOT checking bobber: fishHooked=" + fishHooked +
+                                 ", isHookThrown=" + isHookThrown() + ", hookTick=" + hookTick);
+            }
+        }
+
         // Handle fish hooked state
         if (fishHooked) {
+            System.out.println("[AutoFish TICK] Fish hooked detected! tickAfterHook=" + tickAfterHook);
             if (tickAfterHook == 0) {
-                // Immediately reel in
+                // Immediately reel in on first tick
+                System.out.println("[AutoFish TICK] *** REELING IN FISH NOW! ***");
+                debug("Reeling in fish!");
                 useRod();
+                hookTick = -1;
+                autoFishActive = false;
+                fishHooked = false; // Reset fish hooked state
+                System.out.println("[AutoFish TICK] Reel complete, state reset");
                 if (cfgMessage()) say("Auto Fish: Fish hooked! Reeling in...");
-            }
-            if (tickAfterHook == (int)cfgThrowCooldownTicks()) {
-                // Re-throw after delay
-                useRod();
-                autoFishActive = true;
-                hookTick = 0;
-                fishHooked = false;
-                tickAfterHook = 0;
-                if (cfgMessage()) say("Auto Fish: Re-thrown");
-            }
-            tickAfterHook++;
-            if (tickAfterHook > 40) {
-                // Safety reset after 2 seconds
-                fishHooked = false;
-                tickAfterHook = 0;
+
+                // Schedule re-throw if enabled
+                if (cfgRethrow()) {
+                    nextTickThrow = true;
+                    System.out.println("[AutoFish TICK] Re-throw scheduled");
+                }
+                return;
+            } else {
+                System.out.println("[AutoFish TICK] tickAfterHook != 0, incrementing...");
+                tickAfterHook++;
             }
         }
 
         // Rethrow on timeout
         if (cfgRethrow() && isHookThrown() && hookTick > cfgRethrowCooldownTicks() && !fishHooked) {
             // Reel now, then throw next tick
+            debug("Timeout rethrow triggered (hookTick=" + hookTick + ")");
             useRod(); // reel
             nextTickThrow = true;
             autoFishActive = false;
@@ -280,6 +281,7 @@ public class AutoFish {
 
         // If requested, do the throw this tick after a reel
         if (nextTickThrow && isHoldingRod() && !fishHooked) {
+            debug("Executing scheduled re-throw");
             useRod(); // throw again
             autoFishActive = true;
             hookTick = 0;
@@ -306,27 +308,133 @@ public class AutoFish {
         } catch (Throwable ignored) { }
     }
 
+    // Check bobber for fish bite by monitoring position changes
+    private Vec3d lastBobberPos = null;
+    private int bobberStableTicks = 0;
+
+    private void checkBobberForBite() {
+        try {
+            List<FishingBobberEntity> bobbers = mc.world.getEntitiesByClass(
+                    FishingBobberEntity.class,
+                    new Box(
+                            mc.player.getPos().subtract(100, 100, 100),
+                            mc.player.getPos().add(100, 100, 100)
+                    ),
+                    hook -> hook.getOwner() == mc.player
+            );
+
+            if (bobbers.isEmpty()) {
+                System.out.println("[AutoFish checkBobber] No bobbers found");
+                lastBobberPos = null;
+                bobberStableTicks = 0;
+                return;
+            }
+
+            FishingBobberEntity bobber = bobbers.get(0);
+            Vec3d currentPos = bobber.getPos();
+            Vec3d velocity = bobber.getVelocity();
+
+            System.out.println("[AutoFish checkBobber] Bobber found at " +
+                             String.format("%.2f,%.2f,%.2f", currentPos.x, currentPos.y, currentPos.z) +
+                             " velocity=" + String.format("%.3f,%.3f,%.3f", velocity.x, velocity.y, velocity.z));
+
+            // A fish bite causes the bobber to suddenly dip down (negative Y velocity)
+            // The bobber should be stable (in water) and then suddenly move down
+
+            if (lastBobberPos != null) {
+                double deltaY = currentPos.y - lastBobberPos.y;
+                double velocityY = velocity.y;
+
+                System.out.println("[AutoFish checkBobber] deltaY=" + String.format("%.3f", deltaY) +
+                                 ", velocityY=" + String.format("%.3f", velocityY) +
+                                 ", stableTicks=" + bobberStableTicks);
+
+                // Check if bobber was stable and is now moving significantly downward
+                // Fish bite causes Y velocity of around -0.1 to -0.3
+                boolean wasStable = bobberStableTicks >= 3;
+                boolean suddenDrop = velocityY < -0.08 && deltaY < -0.02;
+
+                System.out.println("[AutoFish checkBobber] wasStable=" + wasStable + ", suddenDrop=" + suddenDrop);
+
+                if (wasStable && suddenDrop) {
+                    System.out.println("[AutoFish] *** FISH BITE DETECTED via bobber motion! velocityY=" +
+                                     String.format("%.3f", velocityY) + ", deltaY=" + String.format("%.3f", deltaY) + " ***");
+                    fishHooked = true;
+                    tickAfterHook = 0;
+                    lastFishDetectionTime = System.currentTimeMillis();
+                    if (cfgMessage()) say("Auto Fish: Fish detected!");
+                    lastBobberPos = null;
+                    bobberStableTicks = 0;
+                    return;
+                }
+
+                // Track stability - bobber is stable if it's not moving much
+                if (Math.abs(deltaY) < 0.01 && Math.abs(velocityY) < 0.05) {
+                    bobberStableTicks++;
+                    System.out.println("[AutoFish checkBobber] Bobber stable, incrementing to " + bobberStableTicks);
+                } else {
+                    if (bobberStableTicks > 0) {
+                        System.out.println("[AutoFish checkBobber] Bobber not stable, resetting from " + bobberStableTicks);
+                    }
+                    bobberStableTicks = 0;
+                }
+            } else {
+                System.out.println("[AutoFish checkBobber] First position recorded");
+            }
+
+            lastBobberPos = currentPos;
+
+        } catch (Throwable e) {
+            System.out.println("[AutoFish] Error checking bobber: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+
     // Splash sound detection to reel in
     private void onSound(SoundInstance sound) {
         if (mc.world == null || mc.player == null) return;
-        if (!isModuleEnabled() || cfgSlug()) return; // slug mode ignores splash
+        if (!isModuleEnabled()) return;
+
         try {
             if (sound == null) return;
 
+            String soundId = sound.getId().toString();
+
+            // Debug only fishing-related sounds
+            if (soundId.contains("fish") || soundId.contains("splash") || soundId.contains("bobber")) {
+                System.out.println("[AutoFish] FISHING-RELATED Sound: " + soundId + " at " + sound.getX() + "," + sound.getY() + "," + sound.getZ());
+            }
+
+            if (cfgSlug()) {
+                System.out.println("[AutoFish] Slug mode enabled, ignoring splash");
+                return; // slug mode ignores splash
+            }
+
             long now = System.currentTimeMillis();
             // basic debounce vs multiple sound system invocations in same tick
-            if (now - lastFishDetectionTime < 250L) return;
+            if (now - lastFishDetectionTime < 250L) {
+                System.out.println("[AutoFish] Debounce active, skipping");
+                return;
+            }
 
-            // Check for splash sound - sound IDs may differ in 1.21
-            String soundId = sound.getId().toString();
-            if (!soundId.contains("splash") && !soundId.contains("entity.fishing_bobber.splash")) return;
+            // Check for splash sound - Fabric 1.21+ uses different sound IDs than Forge 1.8.9
+            // In Forge 1.8.9 it was "game.player.swim.splash"
+            // In Fabric 1.21+ it's "minecraft:entity.generic.splash" or "minecraft:entity.player.splash"
+            boolean isSplash = soundId.contains("splash") ||
+                              soundId.contains("entity.fishing_bobber.splash") ||
+                              soundId.equals("minecraft:entity.generic.splash") ||
+                              soundId.equals("minecraft:entity.player.splash");
+
+            if (!isSplash) return;
 
             Vec3d soundPos = new Vec3d(sound.getX(), sound.getY(), sound.getZ());
+            System.out.println("[AutoFish] *** SPLASH SOUND CONFIRMED at: " + soundPos);
 
-            // Look for our fish hook near the splash
+            // Look for our fish hook near the splash (using slightly larger box than Forge version)
             Box around = new Box(
-                    soundPos.subtract(0.4, 0.4, 0.4),
-                    soundPos.add(0.4, 0.4, 0.4)
+                    soundPos.subtract(0.5, 0.5, 0.5),
+                    soundPos.add(0.5, 0.5, 0.5)
             );
 
             List<FishingBobberEntity> entities = mc.world.getEntitiesByClass(
@@ -335,66 +443,45 @@ public class AutoFish {
                     hook -> hook.getOwner() == mc.player
             );
 
+            System.out.println("[AutoFish] Found " + entities.size() + " bobber entities near splash");
+
             if (!entities.isEmpty()) {
-                // Always reel on matching splash, even if the hook was cast manually
-                useRod(); // reel
-                nextTickThrow = true; // schedule re-throw next tick for consistency
-                autoFishActive = false;
-                hookTick = -1;
-                lastFishDetectionTime = now;
-                if (cfgMessage()) say("Auto Fish: Reel on splash");
-            }
-        } catch (Throwable ignored) { }
-    }
-
-    // Check for fish bite by looking at bobber entity custom name (called during render for fastest detection)
-    private void checkForFishBiteRender() {
-        if (mc.world == null || mc.player == null) return;
-        if (!isModuleEnabled() || cfgSlug()) return;
-
-        try {
-            long currentTime = System.currentTimeMillis();
-            // Add 500ms cooldown to prevent duplicate detections
-            if (currentTime - lastFishDetectionTime < 500L) return;
-
-            // Check all entities for our fishing bobber with "!!!" in name (fish hooked indicator)
-            for (net.minecraft.entity.Entity entity : mc.world.getEntities()) {
-                // Check if entity has custom name with "!!!"
-                if (entity.hasCustomName()) {
-                    String name = entity.getCustomName().getString();
-                    if (name.contains("!!!")) {
-                        // Found an entity with "!!!" - check if it's a fishing bobber
-                        if (entity instanceof FishingBobberEntity) {
-                            FishingBobberEntity bobber = (FishingBobberEntity) entity;
-
-                            // Check if this is our bobber
-                            if (bobber.getOwner() == mc.player) {
-                                // Fish is hooked! Set the flag and let onClientTick handle reeling
-                                if (!fishHooked) {
-                                    fishHooked = true;
-                                    tickAfterHook = 0;
-                                    lastFishDetectionTime = currentTime;
-                                    if (cfgMessage()) say("Auto Fish: Fish detected!");
-                                }
-                                return;
-                            }
-                        }
-                    }
+                System.out.println("[AutoFish] *** FISH BITE DETECTED! Setting fishHooked=true ***");
+                // Mark as hooked so the tick handler will reel it in properly
+                if (!fishHooked) {
+                    fishHooked = true;
+                    tickAfterHook = 0;
+                    lastFishDetectionTime = now;
+                    System.out.println("[AutoFish] State updated: fishHooked=" + fishHooked + ", tickAfterHook=" + tickAfterHook);
+                    if (cfgMessage()) say("Auto Fish: Fish detected (splash)!");
+                } else {
+                    System.out.println("[AutoFish] Already hooked, skipping duplicate");
                 }
+            } else {
+                System.out.println("[AutoFish] No player-owned bobber found near splash");
             }
-        } catch (Throwable ignored) { }
+        } catch (Throwable e) {
+            System.out.println("[AutoFish] ERROR in sound detection: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // Increment and test the sound callback counter
+        soundCallbackCount++;
+        if (soundCallbackCount >= 100) {
+            long elapsed = System.currentTimeMillis() - lastSoundCallbackTime;
+            debug("Sound callback test: received 100 callbacks in " + elapsed + "ms");
+            lastSoundCallbackTime = System.currentTimeMillis();
+            soundCallbackCount = 0;
+        }
     }
 
-    // Check for fish bite by looking at bobber entity custom name
-    private void checkForFishBite() {
-        // This method is no longer used - detection moved to render event for faster response
-    }
 
     // Manual interaction detection
     private void onInteract() {
         try {
             if (isHoldingRod() && autoFishActive) {
                 autoFishActive = false;
+                debug("Manual interaction detected");
                 if (cfgMessage()) say("Auto Fish: Manual interaction");
             }
         } catch (Throwable ignored) { }
@@ -409,7 +496,11 @@ public class AutoFish {
         int y = cfgTimerY();
         String label = "Hook: " + (hookTick < 0 ? "--" : String.format("%.1fs", hookTick / 20.0));
 
-        drawContext.drawText(mc.textRenderer, Text.literal(label), x, y, 0xFFFFFFFF, true);
+        // Add status indicator
+        String status = fishHooked ? " [HOOKED]" : (isHookThrown() ? " [WAITING]" : " [NO HOOK]");
+        label += status;
+
+        drawContext.drawText(mc.textRenderer, Text.literal(label), x, y, fishHooked ? 0xFF00FF00 : 0xFFFFFFFF, true);
     }
 
     // Helpers
@@ -420,16 +511,21 @@ public class AutoFish {
     }
 
     private boolean isHookThrown() {
-        // Search for player's fishing bobber
-        List<FishingBobberEntity> hooks = mc.world.getEntitiesByClass(
-                FishingBobberEntity.class,
-                new Box(
-                        mc.player.getPos().subtract(100, 100, 100),
-                        mc.player.getPos().add(100, 100, 100)
-                ),
-                hook -> hook.getOwner() == mc.player
-        );
-        return !hooks.isEmpty();
+        try {
+            // Search for player's fishing bobber
+            List<FishingBobberEntity> hooks = mc.world.getEntitiesByClass(
+                    FishingBobberEntity.class,
+                    new Box(
+                            mc.player.getPos().subtract(100, 100, 100),
+                            mc.player.getPos().add(100, 100, 100)
+                    ),
+                    hook -> hook.getOwner() == mc.player
+            );
+            return !hooks.isEmpty();
+        } catch (Throwable e) {
+            debug("Error checking hook: " + e.getMessage());
+            return false;
+        }
     }
 
     private void useRod() {
@@ -440,9 +536,12 @@ public class AutoFish {
                 if (mc.player.getOffHandStack().getItem() == Items.FISHING_ROD) {
                     hand = net.minecraft.util.Hand.OFF_HAND;
                 }
+                debug("Using rod in hand: " + hand);
                 mc.interactionManager.interactItem(mc.player, hand);
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable e) {
+            debug("Error using rod: " + e.getMessage());
+        }
     }
 
     private void say(String msg) {
@@ -450,6 +549,16 @@ public class AutoFish {
             if (mc.player != null) {
                 mc.player.sendMessage(Text.literal("§6[Auto Fish] §7" + msg), false);
             }
+        } catch (Throwable ignored) {}
+    }
+
+    private void debug(String msg) {
+        try {
+            if (mc.player != null) {
+                // Send to action bar for less spam
+                mc.player.sendMessage(Text.literal("§e[DEBUG] §7" + msg), true);
+            }
+            System.out.println("[AutoFish DEBUG] " + msg);
         } catch (Throwable ignored) {}
     }
 
