@@ -18,14 +18,12 @@ public class Main implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ModConfigIO.load();
-        // Register DarkMode to use the loaded ModConfig
         DarkMode.register();
         InvincibleTimer.register();
         StarMobHighlight.register();
         KeyHighlight.register();
         AutoSell.register();
         AutoFish.getInstance();
-        // Register keybinds
         KeybindHandler.registerKeybinds();
     }
 }

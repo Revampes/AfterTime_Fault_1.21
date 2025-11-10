@@ -2,9 +2,9 @@
 	"required": true,
 	"package": "com.aftertime.aftertimefault.mixin",
 	"compatibilityLevel": "JAVA_21",
-	"client": [
-		"SoundSystemMixin"
-	],
+        "client": [
+                "InGameHudMixin"
+        ],
 	"injectors": {
 		"defaultRequire": 1
 	}
