@@ -30,15 +30,18 @@ public class KeyHighlight {
             String name = armorStand.getDisplayName() != null
                 ? armorStand.getDisplayName().getString()
                 : "";
+
+
+
             String keyId = armorStand.getUuidAsString();
 
             if (name.contains("Wither Key") && !keyTracking.containsKey(keyId)) {
                 keyTracking.put(keyId, true);
-                DungeonUtils.sendTitle("§6Wither Key Dropped!", "", 10, 40, 10);
+                DungeonUtils.sendTitle("§6Wither Key Dropped!", "1", 10, 40, 10);
                 DungeonUtils.sendChatMessage("§6Wither Key Dropped!");
             } else if (name.contains("Blood Key") && !keyTracking.containsKey(keyId)) {
                 keyTracking.put(keyId, true);
-                DungeonUtils.sendTitle("§cBlood Key Dropped!", "", 10, 40, 10);
+                DungeonUtils.sendTitle("§cBlood Key Dropped!", "1", 10, 40, 10);
                 DungeonUtils.sendChatMessage("§cBlood Key Dropped!");
             }
         }
