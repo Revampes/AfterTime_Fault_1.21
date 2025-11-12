@@ -39,6 +39,7 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	
+	modImplementation files("build/devlibs/ratallofyou-2.2-dev.jar")
 }
 
 processResources {
@@ -107,4 +108,3 @@ task copyMod(type: Copy) {
     into "C:\\Users\\user\\AppData\\Roaming\\PrismLauncher\\instances\\1.21.8\\minecraft\\mods"
 }
 build.finalizedBy copyMod
-

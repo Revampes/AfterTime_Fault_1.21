@@ -102,139 +102,69 @@ public class ModConfig {
             key = "key-highlighter",
             title = "Blood Key Color"
     )
-    public static int bloodKeyColor = 0xFF0000; // Red
-
-    @ToggleButton(
-            key = "auto-sell",
-            name = "Auto Sell",
-            description = "Automatically sell items in dungeon chests",
-            category = "Dungeon"
-    )
-    public static boolean enableAutoSell = false;
-
-    @Slider(
-            key = "auto-sell",
-            title = "Delay (ms)",
-            min = 100,
-            max = 2000
-    )
-    public static int autoSellDelayMs = 500;
-
-    @Slider(
-            key = "auto-sell",
-            title = "Click Type",
-            min = 0,
-            max = 2
-    )
-    public static int autoSellClickType = 0; // 0=Shift, 1=Middle, 2=Left
-
-    @CheckBox(
-            key = "auto-sell",
-            title = "Use Default Items"
-    )
-    public static boolean autoSellUseDefaultItems = true;
-
-    @TextInputField(
-            key = "auto-sell",
-            title = "Custom Items (comma separated)",
-            maxLength = 256
-    )
-    public static String autoSellCustomItems = "";
+    public static int bloodKeyColor = 0xAA0000; // Red
 
     @ToggleButton(
             key = "auto-fish",
             name = "Auto Fish",
-            description = "Automatically fish for you",
-            category = "Fishing"
+            description = "Automatically fishes for you.",
+            category = "Misc"
     )
-    public static boolean enabledAutoFish = false;
+    public static boolean enableAutoFish = false;
 
-    @CheckBox(
+    @ToggleButton(
             key = "auto-fish",
-            title = "Sneak Hold"
+            name = "Move",
+            description = "Allow move when finish fishing",
+            category = "Misc"
     )
-    public static boolean autofishSneakHold = false;
+    public static boolean autoFishEnableMove = true;
 
-    @CheckBox(
+    @ToggleButton(
             key = "auto-fish",
-            title = "Throw If No Hook"
+            name = "Sneak Move",
+            description = "Allow sneak when move",
+            category = "Misc"
     )
-    public static boolean autofishThrowIfNoHook = true;
+    public static boolean autoFishEnableSneak = true;
 
-    @Slider(
+    @ToggleButton(
             key = "auto-fish",
-            title = "Throw Cooldown (s)",
-            min = 0,
-            max = 10
+            name = "Always Sneak",
+            description = "Allow sneak when fishing",
+            category = "Misc"
     )
-    public static int autofishThrowCooldownS = 1;
+    public static boolean autoFishAlwaysSneak = true;
 
-    @CheckBox(
+    @ToggleButton(
             key = "auto-fish",
-            title = "Rethrow"
+            name = "Auto Reset",
+            description = "Auto reset status after 20s if no fish hooked",
+            category = "Misc"
     )
-    public static boolean autofishRethrow = true;
+    public static boolean autoFishEnableAutoRethrow = true;
 
-    @Slider(
+    @Dropdown(
             key = "auto-fish",
-            title = "Rethrow Timeout (s)",
-            min = 1,
-            max = 60
+            name = "Move Method",
+            description = "How to move when finish fishing",
+            options = {"WS", "AD"}
     )
-    public static int autofishRethrowTimeoutS = 30;
-
-    @CheckBox(
-            key = "auto-fish",
-            title = "Slug Mode"
-    )
-    public static boolean autofishSlugMode = false;
-
-    @CheckBox(
-            key = "auto-fish",
-            title = "Show Messages"
-    )
-    public static boolean autofishMessages = true;
-
-    @CheckBox(
-            key = "auto-fish",
-            title = "Show Timer"
-    )
-    public static boolean autofishShowTimer = true;
+    public static int autoFishMoveMethod = 0; // 0 for WS, 1 for AD
 
     @Slider(
             key = "auto-fish",
-            title = "Timer X",
-            min = 0,
-            max = 1000
+            title = "Throw Delay (tick)",
+            min = 10,
+            max = 30
     )
-    public static int autofishTimerX = 10;
+    public static int autoFishThrowDelay = 10;
 
-    @Slider(
+    @ToggleButton(
             key = "auto-fish",
-            title = "Timer Y",
-            min = 0,
-            max = 1000
+            name = "Rotate",
+            description = "Allow rotate when finish fishing",
+            category = "Misc"
     )
-    public static int autofishTimerY = 10;
-
-    @CheckBox(
-            key = "auto-fish",
-            title = "Auto Shift"
-    )
-    public static boolean enabledAutoShift = false;
-
-    @Slider(
-            key = "auto-fish",
-            title = "Auto Shift Interval (s)",
-            min = 1,
-            max = 60
-    )
-    public static int autofishAutoShiftIntervalS = 30;
-
-    @TextInputField(
-            key = "auto-fish",
-            title = "Toggle Hotkey",
-            maxLength = 16
-    )
-    public static String autofishHotkeyName = "F";
+    public static boolean autoFishEnableRotate = true;
 }

@@ -7,7 +7,6 @@ import com.aftertime.aftertimefault.modules.dungeon.InvincibleTimer;
 import com.aftertime.aftertimefault.modules.dungeon.KeyHighlight;
 import com.aftertime.aftertimefault.modules.dungeon.StarMobHighlight;
 import com.aftertime.aftertimefault.modules.render.DarkMode;
-import com.aftertime.aftertimefault.modules.skyblock.AutoFish;
 import net.fabricmc.api.ClientModInitializer;
 
 public class Main implements ClientModInitializer {
@@ -23,7 +22,6 @@ public class Main implements ClientModInitializer {
         StarMobHighlight.register();
         KeyHighlight.register();
         AutoSell.register();
-        AutoFish.getInstance();
         KeybindHandler.registerKeybinds();
     }
 }

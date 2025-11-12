@@ -1,7 +1,6 @@
 package com.aftertime.aftertimefault.mixin;
 
 import com.aftertime.aftertimefault.config.ModConfig;
-import com.aftertime.aftertimefault.modules.skyblock.AutoFish;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.InGameHud;
 import net.minecraft.client.render.RenderTickCounter;
