@@ -105,6 +105,58 @@ public class ModConfig {
     public static int bloodKeyColor = 0xAA0000; // Red
 
     @ToggleButton(
+            key = "secret-clicks",
+            name = "Secret Click Highlighter",
+            description = "Highlights secret chests, levers, and skulls you interact with in dungeons",
+            category = "Dungeon"
+    )
+    public static boolean enableSecretClicks = false;
+
+    @ColorPicker(
+            key = "secret-clicks",
+            title = "Highlight Color"
+    )
+    public static int secretClicksHighlightColor = 0x8000FF00; // Semi-transparent green
+
+    @ToggleButton(
+            key = "auto-sell",
+            name = "Auto Sell",
+            description = "Automatically sells configured drops when an NPC trade window is open",
+            category = "Dungeon"
+    )
+    public static boolean enableAutoSell = false;
+
+    @Slider(
+            key = "auto-sell",
+            title = "Sell Loop Delay (ms)",
+            min = 250,
+            max = 5000
+    )
+    public static int autoSellDelayMs = 750;
+
+    @DropdownBox(
+            key = "auto-sell",
+            title = "Click Type",
+            options = {"Shift Click", "Middle Click", "Left Click"}
+    )
+    public static int autoSellClickType = 0;
+
+    @ToggleButton(
+            key = "auto-sell",
+            name = "Include Default Sell List",
+            description = "Sell the built-in list of dungeon trash drops",
+            category = "Dungeon"
+    )
+    public static boolean autoSellUseDefaultItems = true;
+
+    @TextInputField(
+            key = "auto-sell",
+            title = "Custom Items (comma separated)",
+            maxLength = 512
+    )
+    public static String autoSellCustomItems = "";
+
+    @ToggleButton(
             key = "auto-fish",
             name = "Auto Fish",
             description = "Automatically fishes for you.",
@@ -143,14 +195,6 @@ public class ModConfig {
             category = "Misc"
     )
     public static boolean autoFishEnableAutoRethrow = true;
-
-    @Dropdown(
-            key = "auto-fish",
-            name = "Move Method",
-            description = "How to move when finish fishing",
-            options = {"WS", "AD"}
-    )
-    public static int autoFishMoveMethod = 0; // 0 for WS, 1 for AD
 
     @Slider(
             key = "auto-fish",
