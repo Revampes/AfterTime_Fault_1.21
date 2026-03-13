@@ -1,20 +1,15 @@
 package com.aftertime.aftertimefault.modules.render;
 
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import com.aftertime.aftertimefault.config.ModConfig;
+import com.aftertime.aftertimefault.events.HudRenderEventBus;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
-import com.aftertime.aftertimefault.config.ModConfig;
 
-public class DarkMode implements HudRenderCallback {
+public class DarkMode {
     private static final MinecraftClient mc = MinecraftClient.getInstance();
 
-    public DarkMode() {
-        // no-op: we read directly from ModConfig static fields
-    }
-
-    @Override
-    public void onHudRender(DrawContext context, RenderTickCounter tickCounter) {
+    private void onHudRender(DrawContext context, RenderTickCounter tickCounter) {
         if (!ModConfig.enableDarkMode) return;
         int width = mc.getWindow().getScaledWidth();
         int height = mc.getWindow().getScaledHeight();
@@ -23,6 +18,7 @@ public class DarkMode implements HudRenderCallback {
     }
 
     public static void register() {
-        HudRenderCallback.EVENT.register(new DarkMode());
+        DarkMode instance = new DarkMode();
+        HudRenderEventBus.register(instance::onHudRender);
     }
 }

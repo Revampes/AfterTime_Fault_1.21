@@ -1,16 +1,18 @@
 package com.aftertime.aftertimefault.modules.dungeon;
 
 import com.aftertime.aftertimefault.config.ModConfig;
+import com.aftertime.aftertimefault.events.WorldRenderEventBus;
 import com.aftertime.aftertimefault.utils.RenderUtils;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.boss.WitherEntity;
 import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Box;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class StarMobHighlight {
@@ -18,13 +20,17 @@ public class StarMobHighlight {
     private static final Pattern STARRED_PATTERN = Pattern.compile(".*\u00a76\u272f.*\u00a7c\u2764.*");
 
     public static void register() {
-        WorldRenderEvents.AFTER_ENTITIES.register(StarMobHighlight::onRenderWorld);
+        WorldRenderEventBus.registerAfterEntities(StarMobHighlight::onRenderWorld);
     }
 
-    private static void onRenderWorld(WorldRenderContext context) {
+    private static void onRenderWorld() {
         if (!ModConfig.enableStarMobHighlighter || mc.world == null) {
             return;
         }
+
+        // Track already-highlighted entities to avoid double-drawing
+        // when the same mob has multiple matching armor stands above it.
+        Set<Integer> highlighted = new HashSet<>();
 
         for (Entity entity : mc.world.getEntities()) {
             if (entity instanceof ArmorStandEntity armorStand) {
@@ -34,7 +40,7 @@ public class StarMobHighlight {
 
                 if (isStarredMob(name)) {
                     Entity mob = getMobEntity(armorStand);
-                    if (mob != null) {
+                    if (mob != null && highlighted.add(mob.getId())) {
                         // Get colors from config
                         float r = ((ModConfig.starMobColor >> 16) & 0xFF) / 255.0f;
                         float g = ((ModConfig.starMobColor >> 8) & 0xFF) / 255.0f;
@@ -84,16 +90,26 @@ public class StarMobHighlight {
     }
 
     private static Entity getMobEntity(ArmorStandEntity armorStand) {
-        // Find the nearest non-armorstand entity below the armor stand
+        // Find the nearest living mob below the armor stand.
+        // Filtering to LivingEntity excludes DisplayEntity subtypes (cosmetic weapon/item
+        // displays used by servers like Hypixel) that would otherwise cause false highlights.
         Box searchBox = armorStand.getBoundingBox().expand(1.0, 2.0, 1.0);
 
+        Entity closest = null;
+        double closestDist = Double.MAX_VALUE;
+
         for (Entity entity : mc.world.getOtherEntities(armorStand, searchBox)) {
-            if (!(entity instanceof ArmorStandEntity) &&
+            if (entity instanceof LivingEntity &&
+                !(entity instanceof ArmorStandEntity) &&
                 !(entity instanceof WitherEntity && entity.isInvisible()) &&
                 entity != mc.player) {
-                return entity;
+                double dist = entity.squaredDistanceTo(armorStand);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closest = entity;
+                }
             }
         }
-        return null;
+        return closest;
     }
 }

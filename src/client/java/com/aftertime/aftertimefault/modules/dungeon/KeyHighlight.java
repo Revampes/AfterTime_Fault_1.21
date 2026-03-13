@@ -1,11 +1,10 @@
 package com.aftertime.aftertimefault.modules.dungeon;
 
 import com.aftertime.aftertimefault.config.ModConfig;
+import com.aftertime.aftertimefault.events.EntityLoadEventBus;
+import com.aftertime.aftertimefault.events.WorldRenderEventBus;
 import com.aftertime.aftertimefault.utils.DungeonUtils;
 import com.aftertime.aftertimefault.utils.RenderUtils;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.ArmorStandEntity;
@@ -19,8 +18,8 @@ public class KeyHighlight {
     private static final Map<String, Boolean> keyTracking = new HashMap<>();
 
     public static void register() {
-        WorldRenderEvents.AFTER_ENTITIES.register(KeyHighlight::onRenderWorld);
-        ClientEntityEvents.ENTITY_LOAD.register(KeyHighlight::onEntitySpawn);
+        WorldRenderEventBus.registerAfterEntities(KeyHighlight::onRenderWorld);
+        EntityLoadEventBus.register(KeyHighlight::onEntitySpawn);
     }
 
     private static void onEntitySpawn(Entity entity, net.minecraft.world.World world) {
@@ -47,7 +46,7 @@ public class KeyHighlight {
         }
     }
 
-    private static void onRenderWorld(WorldRenderContext context) {
+    private static void onRenderWorld() {
         if (!ModConfig.enableKeyHighlighter || bloodOpened) return;
 
         for (Entity entity : mc.world.getEntities()) {

@@ -1,16 +1,16 @@
 package com.aftertime.aftertimefault.modules.dungeon;
 
 import com.aftertime.aftertimefault.config.ModConfig;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import com.aftertime.aftertimefault.events.ClientTickEventBus;
+import com.aftertime.aftertimefault.events.GameMessageEventBus;
+import com.aftertime.aftertimefault.events.HudRenderEventBus;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.text.Text;
 
-public class InvincibleTimer implements HudRenderCallback {
+public class InvincibleTimer {
     private int bonzoTime = 0;
     private int spiritTime = 0;
     private int phoenixTime = 0;
@@ -24,7 +24,6 @@ public class InvincibleTimer implements HudRenderCallback {
     }
 
     // New interface method required by the updated HudRenderCallback
-    @Override
     public void onHudRender(DrawContext drawContext, RenderTickCounter tickCounter) {
         // RenderTickCounter doesn't expose tickDelta getter in this environment; just call the helper without it
         this.onHudRender(drawContext, 0f);
@@ -145,14 +144,8 @@ public class InvincibleTimer implements HudRenderCallback {
 
     public static void register() {
         InvincibleTimer instance = new InvincibleTimer();
-        HudRenderCallback.EVENT.register(instance);
-        // Register GAME message listener (not CHAT) to catch system messages like proc notifications
-        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            instance.handleChatMessage(message, overlay);
-        });
-        // Register client tick event so timers count down
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            instance.onClientTick();
-        });
+        HudRenderEventBus.register(instance::onHudRender);
+        GameMessageEventBus.register((message, overlay) -> instance.handleChatMessage(message, overlay));
+        ClientTickEventBus.register(client -> instance.onClientTick());
     }
 }

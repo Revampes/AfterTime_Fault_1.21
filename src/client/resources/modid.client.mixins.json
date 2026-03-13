@@ -2,7 +2,14 @@
 	"required": true,
 	"package": "com.aftertime.aftertimefault.mixin",
 	"compatibilityLevel": "JAVA_21",
+	"refmap": "client-ratallofyou-refmap.json",
         "client": [
+		"WorldRendererMixin",
+		"ClientWorldEntityMixin",
+		"MinecraftClientTickMixin",
+		"ClientPlayNetworkHandlerMixin",
+		"InGameHudMixin",
+		"GameOptionsMixin"
         ],
 	"injectors": {
 		"defaultRequire": 1

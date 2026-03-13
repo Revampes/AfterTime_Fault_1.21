@@ -3,9 +3,9 @@ package com.aftertime.aftertimefault.modules.dungeon;
 import com.aftertime.aftertimefault.config.ModConfig;
 import com.aftertime.aftertimefault.utils.DungeonUtils;
 import com.aftertime.aftertimefault.utils.RenderUtils;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import com.aftertime.aftertimefault.events.ClientTickEventBus;
+import com.aftertime.aftertimefault.events.GameMessageEventBus;
+import com.aftertime.aftertimefault.events.WorldRenderEventBus;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -39,7 +39,7 @@ public final class SecrectClick {
 	private SecrectClick() {}
 
 	public static void register() {
-		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+		ClientTickEventBus.register(client -> {
 			if (!ModConfig.enableSecretClicks) {
 				HIGHLIGHTS.clear();
 				return;
@@ -57,9 +57,9 @@ public final class SecrectClick {
 			}
 		});
 
-		WorldRenderEvents.AFTER_ENTITIES.register(context -> renderHighlights());
+		WorldRenderEventBus.registerAfterEntities(() -> renderHighlights());
 
-		ClientReceiveMessageEvents.GAME.register((message, overlay) -> handleChatMessage(message));
+		GameMessageEventBus.register((message, overlay) -> handleChatMessage(message));
 	}
 
 	private static void handleUseAction(MinecraftClient client) {
